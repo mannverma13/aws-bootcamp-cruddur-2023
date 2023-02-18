@@ -4,7 +4,7 @@
 
 ![Installed AWS CLI](.gitpod.yml)
 
-## homework challenges 
+
 
 ### Create a billing alarm
 
@@ -15,5 +15,10 @@
 ![Budget alram created] ()
 
 
+###  Recereate Architecture Design
 
+![Cruddur Logical Design] ()
 
+![Lucid Charts link] ()
+
+## homework challenges 
