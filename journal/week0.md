@@ -2,23 +2,21 @@
 
 ##  installed AWS CLI in gitpod  
 
-![Installed AWS CLI](.gitpod.yml)
-
+Please refer the gitpod.yml file in main branch.
 
 
 ### Create a billing alarm
 
-![billing alarm created] ()
+![billing alarm created]()
 
 ### Create a budget
 
-![Budget alram created] ()
+![Budget alram created]()
 
 
 ###  Recereate Architecture Design
 
-![Cruddur Logical Design] ()
+![Cruddur Logical Design](assets/Architecture%20Diagram.jpg)
 
-![Lucid Charts link] ()
 
 ## homework challenges 
