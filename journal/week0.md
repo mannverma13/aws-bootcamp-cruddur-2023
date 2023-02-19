@@ -7,11 +7,11 @@ Please refer the gitpod.yml file in main branch.
 
 ### Create a billing alarm
 
-![billing alarm created]()
+![billing alarm created](assets/Billing%20alarm.jpg)
 
 ### Create a budget
 
-![Budget alram created]()
+![Budget alram created](assets/budget%20alarm.jpg)
 
 
 ###  Recereate Architecture Design
