@@ -81,12 +81,12 @@ networks:
   internal-network:
     driver: bridge
     name: cruddur
-    ```
+ ```
 
 Verify that we have service and make them public.
-open the fonrend end point and you shoudl see the app is up.
+open the frontend end point and you shoudl see the app is up.
 
-![8dd41c3e47dbaef872b33adb960e3ad8.png](../_resources/8dd41c3e47dbaef872b33adb960e3ad8.png)
+![APP Running](assets/app%20running%20week1.JPG)
 
 ## updating the Notifications button in app dashboard by adding Notification endpoint.
 
@@ -218,6 +218,10 @@ function App() {
 
 export default App;
 ```
+Notification click is working now and returnign mocekd data.
+
+ ![Notifications](assets/Notifications%20week1.JPG)
+
 
 ## DynamoDB local and Postgres containers.
 
@@ -281,7 +285,7 @@ volumes:
  ```
  Used the commands from 100 days cloud challenge and able to get for table succefully.
  
- -------link for dynamo
+ ![Dynamodb](assets/dynamodbweek1.JPG)
  
  For postgre SQl
  
@@ -294,6 +298,7 @@ volumes:
  ```
  psql --host localhost psql -Upostgres --host localhost
  ```
+ ![Postgres](assets/postgreweek1.JPG)
  
  This should make the week 1 homework completed. I didn't got change to work on the challenge, will try to work on them in future.
  
