@@ -2,7 +2,7 @@
 
 # Docker containers
 
-This week we learnt about dockers . I learned the processs of creatibg contaners How they are helpfull in the devlopment process ,This conecept is new for me and enjoyded it. Overall thi week lerning is great , looking forward to migrate all these to cloude services. like ECR.
+This week we learnt about dockers . I learned the processs of creating contaners How they are helpful in the devlopment process ,This conecept is new for me and enjoyed it. Overall thi week learning is great , looking forward to migrate all these to cloude services. like ECR.
 
 
 ## Backend Docker file 
@@ -82,9 +82,18 @@ networks:
     driver: bridge
     name: cruddur
  ```
+Verify that service are up in ports tab and make them public.
 
-Verify that we have service and make them public.
-open the frontend end point and you shoudl see the app is up.
+## Error
+
+Got an error for the react not found when trying to  open the frontend endpoint.
+Rean npm i command and did compose up again but issue still persists.
+Got help in discord group , issue was with package-lock.json file in fronend-reat-js flask. Delete the file and rena npm i and did compose up issue got fixed.
+
+
+![Error](assets/error_week1.JPG)
+
+open the frontend end point after fixing issues and you shoudl see the app is up.
 
 ![APP Running](assets/app%20running%20week1.JPG)
 
@@ -150,6 +159,7 @@ class NotificationsActivities:
     return results
 ```
 ### app.js
+
 ```
 import './App.css';
 
@@ -227,6 +237,9 @@ Notification click is working now and returnign mocekd data.
 
 in post class session videos we learnt how to create dynamodb and postge sql db and how to run them in termninal.
 
+
+## DynamoDb
+
 Update docker-compose.yml file  for Dynamodb and postgre sql.
 
 ```yaml
@@ -287,7 +300,7 @@ volumes:
  
  ![Dynamodb](assets/dynamodbweek1.JPG)
  
- For postgre SQl
+ ##Postgres
  
  Added script to gitpod.yml file to start up postgresql on starting gitpod
  
