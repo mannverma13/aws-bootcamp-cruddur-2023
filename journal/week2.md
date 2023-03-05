@@ -48,6 +48,66 @@ tracer = trace.get_tracer(__name__)
 FlaskInstrumentor().instrument_app(app)
 RequestsInstrumentor().instrument()
 ```
+image honeycomb
+
+
+
 
 ##  2. AWS X-Ray
+Xray is a distributed tracing service provided by AWS. AWS X-Ray provides a complete view of requests as they travel through your application and filters visual data across payloads, functions, traces, services, APIs, and more with no-code and low-code motions.
+We confiured Xray in our app to provide tracing for our services.
 
+```bash
+# CLI command to create a sampling rule in AWS account.
+aws xray create-sampling-rule --cli-input-json file://aws/json/xray.json
+```
+
+```json
+{
+  "SamplingRule": {
+      "RuleName": "Cruddur",
+      "ResourceARN": "*",
+      "Priority": 9000,
+      "FixedRate": 0.1,
+      "ReservoirSize": 5,
+      "ServiceName": "Cruddur",
+      "ServiceType": "*",
+      "Host": "*",
+      "HTTPMethod": "*",
+      "URLPath": "*",
+      "Version": 1
+  }
+}
+```
+Add below code to app.py in backend-flask 
+
+
+```python
+# import from AWS sdk to aws-sdk for x-ray
+from aws_xray_sdk.core import xray_recorder
+from aws_xray_sdk.ext.flask.middleware import XRayMiddleware
+# url to enable tracing in backend-flask
+xray_url = os.getenv("AWS_XRAY_URL")
+xray_recorder.configure(service='Cruddur', dynamic_naming=xray_url)
+XRayMiddleware(app, xray_recorder)
+
+
+
+Update  docker-compose.yml
+
+It helps to easily deploy and manage the daemon as part of contanerization.
+
+```yaml
+xray-daemon:
+  image: "amazon/aws-xray-daemon"
+  environment:
+    AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+    AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+    AWS_REGION: "us-east-1"
+  command:
+    - "xray -o -b xray-daemon:2000"
+  ports:
+    - 2000:2000/udp
+```
+
+image---aws xray
