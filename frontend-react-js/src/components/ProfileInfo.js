@@ -21,6 +21,14 @@ export default function ProfileInfo(props) {
     }
   }
 
+  const classes = () => {
+    let classes = ["profile-info-wrapper"];
+    if (popped == true){
+      classes.push('popped');
+    }
+    return classes.join(' ');
+  }
+  
   return (
     <div className={classes()}>
       <div className="profile-dialog">
