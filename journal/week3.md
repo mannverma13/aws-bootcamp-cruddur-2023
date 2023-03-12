@@ -20,7 +20,7 @@ imapge- user pool
 image- client id
 
 # AWS Amplify-
-AWS Amplify is a complete solution that lets frontend web and mobile developers easily build, ship, and host full-stack applications on AWS,. It provdes various option to work with differen frameworks and lanuguages. For our project we will be using it integrate with Flask .
+AWS Amplify is a complete solution that lets frontend web and mobile developers easily build, ship, and host full-stack applications on AWS. It provdes various option to work with differen frameworks and lanuguages. For our project we will be using it integrate with Flask .
 
 Install AWS Amplify --> cd into frontend-react-js
 
@@ -218,17 +218,17 @@ const onsubmit_confirm_code = async (event) => {
 ```
 # Once setup is done to use amplify auth. use below step to signup new user and verification.
 
-1.Create new user by clicking on jion now page on cruddur app. Add all details click on signup
-2.A confirmattion page will pop up, which require a otp to be entered .please check email used while signing up for code.
-3.Enter confirmation code and user will be confirmed. Same can be confirmed in AWS cognito.
-4.Login with user email and passowrd used while signup.
+1. Create new user by clicking on jion now page on cruddur app. Add all details click on signup.
+2. A confirmattion page will pop up, which require a otp to be entered .please check email used while signing up for code.
+3. Enter confirmation code and user will be confirmed. Same can be confirmed in AWS cognito.
+4. Login with user email and passowrd used while signup.
 
 # forget password 
-1.Use recovery page to reset the password.
-Enter email to send recovey code, click on recovery code a popup comes to enter a conrimation code and set new password.
-2.Enter code recieved on email , enters new password and click on reset  password button.
-Your password ha been reset succefully confirmation message displayed.
-Use new password to logon to cruddur app.
+1. Use recovery page to reset the password.
+   Enter email to send recovey code, click on recovery code a popup comes to enter a conrimation code and set new password.
+2. Enter code recieved on email , enters new password and click on reset  password button.
+   Your password ha been reset succefully confirmation message displayed.
+3. Use new password to logon to cruddur app.
 
 # Implementing Cogntio  with server side verification
 
