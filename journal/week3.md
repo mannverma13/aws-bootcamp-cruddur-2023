@@ -446,7 +446,33 @@ if cognito_user_id != None:
   results.insert(0,extra_crud)
   ```
 
-
+ screen proofs after implementation of cognito and JWT
+ 
+ User pool creation
+ ![user pool creation](assets/week3/user%20pool.jpg)
+ ![user pool creation](assets/week3/app%20client.jpg)
+ 
+ Signup
+ ![user pool creation](assets/week3/signup.jpg)
+ Password reset
+ ![user pool creation](assets/week3/recovery%20page.jpg)
+ ![user pool creation](assets/week3/password%20reset.jpg)
+ ![user pool creation](assets/week3/otp%20recieved.jpg)
+ ![user pool creation](assets/week3/reset%20confirmation.jpg)
+ 
+ sign on
+ ![user pool creation](assets/week3/success%20logon.jpg)
+ signout
+ ![user pool creation](assets/week3/success%20logout.jpg)
+ 
+ authentication log
+ ![user pool creation](assets/week3/authentication%20console.jpg)
+ 
+ AWS console - successful user creation
+ ![user pool creation](assets/week3/user%20signup%20confirmation%20AWS%20console.jpg)
+ 
+ 
+ 
 
 
 
