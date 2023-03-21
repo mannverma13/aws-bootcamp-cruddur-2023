@@ -1,44 +1,28 @@
-import json
-import psycopg2
-import os
+-- https://www.postgresql.org/docs/current/uuid-ossp.html
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-def lambda_handler(event, context):
-    user = event['request']['userAttributes']
-    print('userAttributes')
-    print(user)
+-- forcefully drop our tables if they already exist
+DROP TABLE IF EXISTS public.users;
+DROP TABLE IF EXISTS public.activities;
 
-    user_display_name  = user['name']
-    user_email         = user['email']
-    user_handle        = user['preferred_username']
-    user_cognito_id    = user['sub']
-    try:
-      print('entered-try')
-      sql = f"""
-         INSERT INTO public.users (
-          display_name, 
-          email,
-          handle, 
-          cognito_user_id
-          ) 
-        VALUES(
-        '{user_display_name}',
-        '{user_email}',
-        '{user_handle}',
-        '{user_cognito_id}'
-        )
-      """
-      print('SQL Statement ----')
-      print(sql)
-      conn = psycopg2.connect(os.getenv('CONNECTION_URL'))
-      cur = conn.cursor()
-      cur.execute(sql)
-      conn.commit() 
+CREATE TABLE public.users (
+  uuid UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  display_name text NOT NULL,
+  handle text NOT NULL,
+  email text NOT NULL,
+  cognito_user_id text NOT NULL,
+  created_at TIMESTAMP default current_timestamp NOT NULL
+);
 
-    except (Exception, psycopg2.DatabaseError) as error:
-      print(error)
-    finally:
-      if conn is not None:
-          cur.close()
-          conn.close()
-          print('Database connection closed.')
-    return event
+
+CREATE TABLE public.activities (
+  uuid UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  user_uuid UUID NOT NULL,
+  message text NOT NULL,
+  replies_count integer DEFAULT 0,
+  reposts_count integer DEFAULT 0,
+  likes_count integer DEFAULT 0,
+  reply_to_activity_uuid integer,
+  expires_at TIMESTAMP,
+  created_at TIMESTAMP default current_timestamp NOT NULL
+);
