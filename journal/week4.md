@@ -33,6 +33,8 @@ aws rds create-db-instance \
 ```
 3. verify the database created in AWS console.
 
+-----image for aws db created
+
 5. Check if you have a running connection to your PostgreSQL in cli
 ```
 psql -Upostgres --host localhost
@@ -75,22 +77,17 @@ CREATE TABLE public.activities (
 export the test url and gp to set in GITPOD veraible.
 ```
 export CONNECTION_URL="postgresql://postgres:password@localhost:5432/cruddur"
-```
-```
 gp env CONNECTION_URL="postgresql://postgres:password@localhost:5432/cruddur"
 ```
 
 15 Setup connection for the RDS INSTANCE --> cli
 ```
 export PROD_CONNECTION_URL="postgresql://root:<PASSWORD>@<ENTER DATA BASE ENDPOINT AND PORT FROM AWS>RDS:5432/cruddur"
-```
-16. Now set the env vars for DB connections in gitpod for RDS INSTANCE --> cli
-```
 gp env PROD_CONNECTION_URL="postgresql://root:<PASSWORD>@<ENTER DATA BASE ENDPOINT AND PORT FROM AWS>RDS:5432/cruddur"
 ```
 
-17. Create a bin file to add scripts to add and remove from the schema file --> backend-flask in the root create a folder named bin and create 3 files db-create, db-drop, db-schema-load.
-run in cli --> whereis bash --> add the path to all three file at the top
+17. Create bash scripts to connect db , create db and scmea load
+
 *db-create
 ```
 #! /usr/bin/bash
@@ -140,7 +137,8 @@ fi
 
 psql $URL cruddur < $schema_path
 ```
-18. When creating new bash files you need to give premission to execute this will set for the user.
+18.WE need permission to run thse scripts. Chmod command is used to  provide write access to run these scripts.
+
 ```
 chmod u+x bin/db-create
 chmod u+x bin/db-drop
@@ -148,24 +146,14 @@ chmod u+x bin/db-schema-load
 ```
 
 21. run command to schema --> ./bin/db-schema-load --> this should create the tables from the schema
-22. create a file inside bin --> db-connect
-```
-#! /usr/bin/bash
-if [ "$1" = "prod" ]; then
-  echo "Running in production mode"
-  URL=$PROD_CONNECTION_URL
-else
-  URL=$CONNECTION_URL
-fi
 
-psql $URL
-```
 
 ![image rds](assets/week4aws/postgres-password-stored-cli.png)
 
 25. check if tables exist --> \dt.
 
 ![image rds](assets/week4aws/td-command-tables.png)
+
 
 27. create a new inside db --> seed.sql
 ```
@@ -183,7 +171,7 @@ VALUES
     current_timestamp + interval '10 day'
   )
 ```
-26. create a new file in bin folder --> db-seed
+26. create a new file in bin folder --> db-seed  . thsi script is use to insert data in table.
 ```
 #! /usr/bin/bash
 
@@ -205,15 +193,18 @@ fi
 psql $URL cruddur < $seed_path
 ```
 
-# Checking Data
-To check the data in the data base run --> ./bin/db-connect --> \dt --> SELECT * FROM activities; 
-to check the data in more readable format --> first quit out of data table --> then type --> \x on and then type --> SELECT * FROM activities; 
+To check the data if insterted to table , run below query 
+connect to db- ./bin/db-connect 
+\dt --> SELECT * FROM activities; 
+
+to check the data in more readable format type --> \x on 
+and then run query --> SELECT * FROM activities; 
 
 ![image rds](assets/week4aws/x-on-postgress.png)
 
-# Check The Active Connection We Are Using In PostgreSQL
-1. create a new file in bin folder --> db-sessions.
-2. add the code below
+# To check ho many db sessions we have opened. we create a script and saved as db-sesssions
+This script give us details fo all db sessions we have created.
+
 ```
 #! /usr/bin/bash
 CYAN='\033[1;36m'
@@ -237,14 +228,12 @@ psql $NO_DB_URL -c "select pid as process_id, \
        state \
 from pg_stat_activity;"
 ```
-3. make the file executable --> chmod u+x bin/db-session.
-4. run the bash script --> ./bin/db-session.
 
 ![image rds](assets/week4aws/db-sessions.png)
 
-# Create a new bash script to Setup Data Base
-1. create a new file in the bin folder and name it db-setup.
-2. add the code below.
+# To run complete db scripts in one go we create a db-setup script. 
+This scriot will drop table if created  and then create sb, create schemas and insert data to the tables.
+
 ```
 #! /usr/bin/bash
 -e # stop if it fails at any point
@@ -261,29 +250,9 @@ source "$bin_path/db-create"
 source "$bin_path/db-schema-load"
 source "$bin_path/db-seed"
 ```
-3. make the file executable --> chmod u+x bin/db-setup.
-4. run the bash script --> ./bin/db-setup.
 
 ![image rds](assets/week4aws/db-setup.png)
 
-# Create a bash script to connect to DB
-1. create a file name db-connect
-2. add the code below
-```
-#! /usr/bin/bash
-if [ "$1" = "prod" ]; then
-  echo "Running in production mode"
-  URL=$PROD_CONNECTION_URL
-else
-  URL=$CONNECTION_URL
-fi
-
-psql $URL
-```
-3. grant access to the script --> chmod u+x bin/db-connect.
-4. run the script --> ./bin/db-connect PROD
-
-![image rds](assets/week4aws/db-connect-PROD.png)
 
 # Installing Drivers For PostgreSQL
 1. add the packages to the requirements.txt file.
@@ -295,101 +264,14 @@ psycopg[pool]
 ```
 pip install -r requirements.txt
 ```
-# Creating connection with PostgreSQL using Psycopg Connection Pooling 
-1. create a new file inside lib --> db.py.
-2. add the code below.
-```
-from psycopg_pool import ConnectionPool
-import os
 
-  def query_wrap_object(template):
-    sql = f"""
-    (SELECT COALESCE(row_to_json(object_row),'{{}}'::json) FROM (
-    {template}
-    ) object_row);
-    """
-    return sql
-  def query_wrap_array(template):
-    sql = f"""
-    (SELECT COALESCE(array_to_json(array_agg(row_to_json(array_row))),'[]'::json) FROM (
-    {template}
-    ) array_row);
-    """
-    return sql
-
-connection_url = os.getenv("CONNECTION_URL")
-pool = ConnectionPool(connection_url)
-```
-# Add the connection of the pool to the docker-compose file
-```
-backend-flask:
-  environment:
-    CONNECTION_URL: "${CONNECTION_URL}"
-    #CONNECTION_URL: "postgresql://postgres:password@db:5432/cruddur"
-```
-# Import db.py file and update the home_activities.py to make a query to the DB
-```
-from datetime import datetime, timedelta, timezone
-from opentelemetry import trace
-
-from lib.db import pool, query_wrap_array
-
-#tracer = trace.get_tracer("home.activities")
-
-class HomeActivities:
-  def run(cognito_user_id=None):
-    #logger.info("HomeActivities")
-    #with tracer.start_as_current_span("home-activites-mock-data"):
-    #  span = trace.get_current_span()
-    #  now = datetime.now(timezone.utc).astimezone()
-    #  span.set_attribute("app.now", now.isoformat())
-
-    sql = query_wrap_array("""
-    SELECT
-      activities.uuid,
-      users.display_name,
-      users.handle,
-      activities.message,
-      activities.replies_count,
-      activities.reposts_count,
-      activities.likes_count,
-      activities.reply_to_activity_uuid,
-      activities.expires_at,
-      activities.created_at
-    FROM public.activities
-    LEFT JOIN public.users ON users.uuid = activities.user_uuid
-    ORDER BY activities.created_at DESC
-    """)
-    print(sql)
-    with pool.connection() as conn:
-      with conn.cursor() as cur:
-        cur.execute(sql)
-        # this will return a tuple
-        # the first field being the data
-        json = cur.fetchone()
-    return json[0]
-
-```
-The method is responsible for executing a SQL query to fetch some data from a database using the db module. The SQL query is created using the template method of the db object, which is an instance of the Db class defined in the db module.The query is then executed using the query_array_json method of the db object. The results are then returned by the run method.
-
-# Establish Connection To The PostgreSQL Database
-1. AWS console start the RDS connection.
-2. AWS setup new security inbound rule
-* TYPE --> PostgreSQL
-* PROTOCOL --> TCP
-* PORT RANGE --> 5432 
-* RUN IN CLI --> GITPOD_IP=$(curl ifconfig.me) --> get the ip address and add in AWS source
-* SOURCE --> eneter here the ip address
-* DESCRIPTION --> GITPOD
-* SAVE
-3. run in terminal cli
-```
-psql $PROD_CONNECTION_URL
-```
-4. now type \ls to show the tables on data base connected to RDS with PostgreSQL
+# Connection to postgres db in RDS
+Setup a new inboud rule in database created which will allow Gitpod to the database in AWS.
 
 # Modify the security groups in AWS
-1. paste these into cli turn by turn and hit enter.
+We have created a bash script to update IP address of Girpod in AWS database inbound rule automatically.
+
+1.Run below command to set security group id and rule in gitpod env.
 ```
 export DB_SG_ID="<Add the security group id here from AWS>"
 gp env DB_SG_ID="<Add the security group id here from AWS>"
@@ -404,8 +286,7 @@ aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-3. create a new bash script to update the GITPOD yml file to load the env vars into AWS RDS security rules
-* create a new file db-rds-update-sg-rule inside the bin folder and add the code below.
+* db-rds-update-sg-rule
 ```
 #! /usr/bin/bash
 
@@ -422,29 +303,20 @@ aws ec2 modify-security-group-rules \
 ```
 export GITPOD_IP=$(curl ifconfig.me)
 ```
-5. grant permission to bash script --> chmod u+x bin/rds-update-sg-rule
-6. Update GITPOD yaml file to update everytime we start GITPOD
+6. Update GITPOD yaml file to run the script everytime Gitpod starts.
 ```
 command: |
   export GITPOD_IP=$(curl ifconfig.me)
   source  "$THEIA_WORKSPACE_ROOT/backend-flask/bin/db-rds-update-sg-rule"
 ```
-7. Check in AWS RDS security rules if the script has worked and git commit and quit out of gitpod and restart a new GITPOD environment.
+ 
 
 ![image rds](assets/week4aws/sg-rule-gitpod.png)
 
-9. run script --> ./bin/db-connect PROD to check if the production mode is running, if yes then quit.
-
-![image rds](assets/week4aws/db-connect-PROD.png)
-
-10. make sure in backend-flask and run script --> ./bin/db-schema-load prod and refresh frontend page and should get 200 response with empty object as nothing has been added yet in data base.
-
-![image rds](assets/week4aws/prod-console-200-empty.png)
-![image rds](assets/week4aws/prod-console-frontend-200.png)
-
+ 
 # Cognito Post Confirmation Lambda
 Implementing custom authorizer for congito for user to be inserted into db.
-Create a Lambda Function in AWS
+Create a Lambda Function in AWS  python as language.
 1. AWS ---> Lambda --> create a function.
 2. Author from scratch
 3. Function name --> cruddur-post-confirmation.
@@ -460,104 +332,67 @@ import json
 import psycopg2
 import os
 
-
 def lambda_handler(event, context):
     user = event['request']['userAttributes']
-    user_display_name = user['name']
-    user_email = user['email']
-    user_cognito_id = user['sub']
-    user_handle = user['preferred_username']
+    print('userAttributes')
+    print(user)
 
+    user_display_name  = user['name']
+    user_email         = user['email']
+    user_handle        = user['preferred_username']
+    user_cognito_id    = user['sub']
     try:
-        
-        sql = f"""
-        INSERT INTO users (
-            display_name,
-            email,
-            handle, 
-            cognito_user_id
-            )
+      print('entered-try')
+      sql = f"""
+         INSERT INTO public.users (
+          display_name, 
+          email,
+          handle, 
+          cognito_user_id
+          ) 
         VALUES(
-            '{user_display_name}',
-            '{user_email}', 
-            '{user_handle}', 
-            '{user_cognito_id}'
+        '{user_display_name}',
+        '{user_email}',
+        '{user_handle}',
+        '{user_cognito_id}'
         )
-        """
-        
-        print('SQL =========')
-        print(sql)
-        
-        conn = psycopg2.connect(os.getenv('CONNECTION_URL'))
-        cur = conn.cursor()
-        
-        cur.execute(sql)
-        conn.commit()
+      """
+      print('SQL Statement ----')
+      print(sql)
+      conn = psycopg2.connect(os.getenv('CONNECTION_URL'))
+      cur = conn.cursor()
+      cur.execute(sql)
+      conn.commit() 
 
     except (Exception, psycopg2.DatabaseError) as error:
-        print(error)
-
+      print(error)
     finally:
-        if conn is not None:
-            cur.close()
-            conn.close()
-            print('Database connection closed.')
-
+      if conn is not None:
+          cur.close()
+          conn.close()
+          print('Database connection closed.')
     return event
 ```
 
-# Update schema.sql to handle the requests for the db tables.
-```
-CREATE TABLE public.users (
-  uuid UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  display_name text NOT NULL,
-  handle text NOT NULL,
-  email text NOT NULL,
-  cognito_user_id text NOT NULL,
-  created_at TIMESTAMP default current_timestamp NOT NULL
-);
-```
-# Lambda Function
+## Lambda Function need to update below properties.
 1. Edit Environment Variables --> key - CONNECTION_URL --> value - enter prod_connection_url value here 
 2. Code Source --> paste in the code from --> cruddur-post-confirrmation.py
-3. Add Lambda Layer as in the tutorial this was not the region i was in i had to implement the following step to resolve the issue
-```
-# github repo added the arn from here
-https://github.com/jetbridge/psycopg2-lambda-layer
-```
-4. hit verify
+3. Add Lambda Layer as in the tutorial .
+
+## Add lambda function as trigger to the cognitio user pool
 5. Add Trigger to Congnito --> cruddur-user-pool --> User Pool Properties tab ---> Lambda Triggers.
 6. Add Lambda Trigger --> Sign-up --> Post confirmation trigger.
 7. Lambda Function --> Assign Lambda Function --> select --> one you created earlier.
 8. Add Lamdba Trigger.
-9. Create Permission for user for EC2 instance for VPC --> Create Role Policy --> Open Lamdba in AWS console
-10. Configuration tab --> Permissions --> click on Execution roles --> cruddur.
-11. Permission Policies -->  Policies --> Create Policy --> JSON
-```
-{
-  "Version": "2012-10-17",
-  "Statement": [{
-    "Effect": "Allow",
-    "Action": [
-      "ec2:DescribeNetworkInterfaces",
-      "ec2:CreateNetworkInterface",
-      "ec2:DeleteNetworkInterface",
-      "ec2:DescribeInstances",
-      "ec2:AttachNetworkInterface"
-    ],
-    "Resource": "*"
-  }]
-}
-```
-12. Copy the name of the Role.
-13. Click on next once created the json file.
-14. Review Policy Name --> Paste the Role copied. --> Description AWS Lambda Function Role Policy for user.
-15. Lambda Aws console --> Permissions --> Execution Roles --> Attach the Policy created.
-16. Add the VPC --> VPC add one that is provided now --> Subnets --> add 2 from us-east-1a --> Security Group --> add the default one --> hit save
-17. Hit deploy.
-18. Make sure running Docker-compose up and cd backend-flask, run bash script ./bin/db-connect prod --> \dt --> type --> select * from users;(this show thw user in DB)
-19. Cognito --> goto to frontend and create a user and check log in Lambda Cloudwatch.
 
+##  update permissions , and add EC@ role execution role 
+Create Permission for user for EC2 instance for VPC --> Create Role Policy --> Open Lamdba in AWS console
+11. Configuration tab --> Permissions --> click on Execution roles --> cruddur.
+12. Permission Policies -->  Policies --> Create Policy --> JSON
+```
+imagee---->
+
+Create a user and check if user get create in database. Functio will get trigger post singup confirmation.
 
 ![image rds](assets/week4aws/lambda-aws-cloudwatch-logs-user.png)
 ![image rds](assets/week4aws/lambda-cognito-user-created.png)
