@@ -33,7 +33,7 @@ aws rds create-db-instance \
 ```
 3. verify the database created in AWS console.
 
------image for aws db created
+![image rds db ](assets/week4/rds-creation-console.jpg)
 
 5. Check if you have a running connection to your PostgreSQL in cli
 ```
@@ -43,7 +43,7 @@ psql -Upostgres --host localhost
 ```
 CREATE database cruddur;
 ```
-type --> \l --> this will show the DB that you just created.
+
 8. In IDE(vs code) backend-flask create a new folder --> db --> new file --> schema.sql
 9. schema.sql code
 ```
@@ -148,11 +148,11 @@ chmod u+x bin/db-schema-load
 21. run command to schema --> ./bin/db-schema-load --> this should create the tables from the schema
 
 
-![image rds](assets/week4aws/postgres-password-stored-cli.png)
+![image local db ](assets/week4/db-create.png)
 
 25. check if tables exist --> \dt.
 
-![image rds](assets/week4aws/td-command-tables.png)
+![image local db ](assets/week4/table-created.png)
 
 
 27. create a new inside db --> seed.sql
@@ -251,8 +251,6 @@ source "$bin_path/db-schema-load"
 source "$bin_path/db-seed"
 ```
 
-![image rds](assets/week4aws/db-setup.png)
-
 
 # Installing Drivers For PostgreSQL
 1. add the packages to the requirements.txt file.
@@ -310,8 +308,7 @@ command: |
   source  "$THEIA_WORKSPACE_ROOT/backend-flask/bin/db-rds-update-sg-rule"
 ```
  
-
-![image rds](assets/week4aws/sg-rule-gitpod.png)
+![image Gitpod ip](assets/week4/Gitpod_IP_setup.jpg)
 
  
 # Cognito Post Confirmation Lambda
@@ -390,13 +387,10 @@ Create Permission for user for EC2 instance for VPC --> Create Role Policy --> O
 11. Configuration tab --> Permissions --> click on Execution roles --> cruddur.
 12. Permission Policies -->  Policies --> Create Policy --> JSON
 ```
-imagee---->
 
 Create a user and check if user get create in database. Functio will get trigger post singup confirmation.
 
-![image rds](assets/week4aws/lambda-aws-cloudwatch-logs-user.png)
-![image rds](assets/week4aws/lambda-cognito-user-created.png)
-
+![image Gitpod ip](assets/week4/insert-post-cognito-lambda.jpg)
 
 # Create Activites
 The following is all the updates i needed to make to create the implementation of user to create a message on the frontend
@@ -449,8 +443,9 @@ def lambda_handler(event, context):
           print('Database connection closed.')
     return event
 ```
+
 2. updated schema.sql
-```
+
 -- https://www.postgresql.org/docs/current/uuid-ossp.html
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -480,6 +475,7 @@ CREATE TABLE public.activities (
   created_at TIMESTAMP default current_timestamp NOT NULL
 );
 ```
+
 3. created folder inside db sql/activites --> created three files home.sql, object.sql, create.sql.
 * create.sql
 ```
@@ -516,6 +512,7 @@ LEFT JOIN public.users ON users.uuid = activities.user_uuid
 ORDER BY activities.created_at DESC
 ```
 * object.sql
+
 ```
 SELECT
   activities.uuid,
@@ -530,6 +527,7 @@ WHERE
   activities.uuid = %(uuid)s
 ```
 4. Updated db.py file inside lib folder
+
 ```
 from psycopg_pool import ConnectionPool
 import os
@@ -646,7 +644,9 @@ class Db:
 
 db = Db()
 ```
+
 5. Updated create_activities in services
+
 ```
 from datetime import datetime, timedelta, timezone
 
@@ -768,17 +768,5 @@ body: JSON.stringify({
 ```
 With all the implementation above i was able to create an activity.
 
-![image rds](assets/week4aws/query-working.png)
-![image rds](assets/week4aws/create_activites.png)
-![image rds](assets/week4aws/create-activites-withuser.png)
+![image rds activity](assets/week4/activity_created.jpg)
 
-# Securing Your Amazon RDS Postgres Database
-Securing your Amazon RDS Postgres database is crucial to protect your data from unauthorized access, tampering, or theft. Here are some best practices to secure your Amazon RDS Postgres database
-
-1. Use strong passwords: Use strong passwords for your database users and avoid using easily guessable passwords. Consider using a password manager to store and manage your passwords securely. 
-2. Enable SSL/TLS encryption: Use SSL/TLS encryption to secure data in transit between your application and database. This can be done by enabling SSL on your database instance and configuring your application to use SSL.
-3. Restrict access to your database: Use security groups to restrict access to your database instance to only authorized IP addresses and/or EC2 instances.
-4. Use IAM authentication: Use IAM authentication to manage database access for your AWS resources, including EC2 instances and Lambda functions.
-5. Enable automatic backups: Enable automatic backups for your database instance and store backups in a secure location.
-6. Monitor database activity: Monitor your database activity using Amazon CloudWatch and Amazon RDS event notifications to detect unusual activity and potential security threats.
-7. Regularly update and patch your database: Keep your database software up-to-date with the latest patches and security updates to address any vulnerabilities.
