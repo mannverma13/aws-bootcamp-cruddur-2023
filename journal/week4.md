@@ -1,11 +1,11 @@
 # Week 4 — Postgres and RDS
+
+This week we cnneted our app to database using local postgres and AWS managed database RDS.
+
 PostgreSQL is a popular open-source relational database management system (RDBMS) that is widely used by developers and organizations. Amazon Web Services (AWS) provides a managed PostgreSQL database service called Amazon RDS (Relational Database Service), which makes it easy to set up, operate, and scale PostgreSQL databases in the cloud.
 
-Amazon RDS for PostgreSQL provides several benefits to users, including automatic backups, automated software patching, and replication for high availability. It also supports Amazon Aurora PostgreSQL, which is a highly scalable and performance-optimized version of PostgreSQL.
+Amazon RDS for PostgreSQL provides several benefits to users, including automatic backups, automated software patching, and replication for high availability. It also supports Amazon Aurora PostgreSQL, which is a highly scalable and performance-optimized version of PostgreSQL. You can use cloudwatc to view logs, take backup, snapshots etc.
 
-With Amazon RDS for PostgreSQL, you can choose the instance type, storage capacity, and other configuration settings that best fit your application requirements. You can also easily scale up or down your PostgreSQL database based on changing workload demands.
-
-One of the key advantages of using Amazon RDS for PostgreSQL is that it takes care of many of the routine database management tasks, such as backups, patching, and monitoring, allowing you to focus on developing your application. Additionally, AWS provides several tools and services to help you manage your PostgreSQL databases, including Amazon CloudWatch for monitoring, AWS Database Migration Service for migrating data, and AWS Schema Conversion Tool for converting database schemas.
 
 # Setting RDS Instance In AWS By Using Cli
 1. select your zone in aws --> us-east-1
@@ -35,17 +35,17 @@ aws rds create-db-instance \
 
 ![image rds db ](assets/week4/rds-creation-console.jpg)
 
-5. Check if you have a running connection to your PostgreSQL in cli
+4. Check if you have a running connection to your PostgreSQL in cli
 ```
 psql -Upostgres --host localhost
 ```
-7. Create a DB in postgreSQL
+5. Create a DB in postgreSQL
 ```
 CREATE database cruddur;
 ```
 
-8. In IDE(vs code) backend-flask create a new folder --> db --> new file --> schema.sql
-9. schema.sql code
+6. In IDE(vs code) backend-flask create a new folder --> db --> new file --> schema.sql
+7. schema.sql code
 ```
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 DROP TABLE IF EXISTS public.users;
@@ -80,13 +80,13 @@ export CONNECTION_URL="postgresql://postgres:password@localhost:5432/cruddur"
 gp env CONNECTION_URL="postgresql://postgres:password@localhost:5432/cruddur"
 ```
 
-15 Setup connection for the RDS INSTANCE --> cli
+8. Setup connection for the RDS INSTANCE --> cli
 ```
 export PROD_CONNECTION_URL="postgresql://root:<PASSWORD>@<ENTER DATA BASE ENDPOINT AND PORT FROM AWS>RDS:5432/cruddur"
 gp env PROD_CONNECTION_URL="postgresql://root:<PASSWORD>@<ENTER DATA BASE ENDPOINT AND PORT FROM AWS>RDS:5432/cruddur"
 ```
 
-17. Create bash scripts to connect db , create db and scmea load
+9. Create bash scripts to connect db , create db and scmea load
 
 *db-create
 ```
@@ -145,33 +145,33 @@ chmod u+x bin/db-drop
 chmod u+x bin/db-schema-load
 ```
 
-21. run command to schema --> ./bin/db-schema-load --> this should create the tables from the schema
+10. run command to schema --> ./bin/db-schema-load --> this should create the tables from the schema
 
 
 ![image local db ](assets/week4/db-create.png)
 
-25. check if tables exist --> \dt.
+  Check if tables exist --> \dt.
 
 ![image local db ](assets/week4/table-created.png)
 
+11. create a new query to insert data in local postgres db . Create a sql file in  db/seed.sql
 
-27. create a new inside db --> seed.sql
 ```
 -- this file was manually created
-INSERT INTO public.users (display_name, handle, email, cognito_user_id)
+INSERT INTO public.users (display_name, handle, cognito_user_id)
 VALUES
-  ('Jess BK', 'jess-bk' , 'jessbk@hotmail.com', 'MOCK'),
-  ('Andrew Bayko', 'bayko' , 'test@test.com', 'MOCK');
+  ('Andrew Brown', 'andrewbrown' ,'MOCK'),
+  ('Andrew Bayko', 'bayko' ,'MOCK');
 
 INSERT INTO public.activities (user_uuid, message, expires_at)
 VALUES
   (
-    (SELECT uuid from public.users WHERE users.handle = 'jess-bk' LIMIT 1),
+    (SELECT uuid from public.users WHERE users.handle = 'andrewbrown' LIMIT 1),
     'This was imported as seed data!',
     current_timestamp + interval '10 day'
   )
 ```
-26. create a new file in bin folder --> db-seed  . thsi script is use to insert data in table.
+26. create bash script to run seed.sql file. create a new file in bin folder.
 ```
 #! /usr/bin/bash
 
@@ -197,12 +197,8 @@ To check the data if insterted to table , run below query
 connect to db- ./bin/db-connect 
 \dt --> SELECT * FROM activities; 
 
-to check the data in more readable format type --> \x on 
-and then run query --> SELECT * FROM activities; 
 
-![image rds](assets/week4aws/x-on-postgress.png)
-
-# To check ho many db sessions we have opened. we create a script and saved as db-sesssions
+# To check how many db sessions we have opened. we created a script and saved as db-sesssions
 This script give us details fo all db sessions we have created.
 
 ```
@@ -228,8 +224,6 @@ psql $NO_DB_URL -c "select pid as process_id, \
        state \
 from pg_stat_activity;"
 ```
-
-![image rds](assets/week4aws/db-sessions.png)
 
 # To run complete db scripts in one go we create a db-setup script. 
 This scriot will drop table if created  and then create sb, create schemas and insert data to the tables.
@@ -267,7 +261,7 @@ pip install -r requirements.txt
 Setup a new inboud rule in database created which will allow Gitpod to the database in AWS.
 
 # Modify the security groups in AWS
-We have created a bash script to update IP address of Girpod in AWS database inbound rule automatically.
+We have created a bash script to update IP address of Girpod in AWS database inbound rule automatically.This will help to connect Girpod to AWS RDS database.
 
 1.Run below command to set security group id and rule in gitpod env.
 ```
@@ -297,11 +291,11 @@ aws ec2 modify-security-group-rules \
     --group-id $DB_SG_ID \
     --security-group-rules "SecurityGroupRuleId=$DB_SG_RULE_ID,SecurityGroupRule={Description=GITPOD,IpProtocol=tcp,FromPort=5432,ToPort=5432,CidrIpv4=$GITPOD_IP/32}"
 ```
-4. set the env var's for GITPOD.
+3. set the env var's for GITPOD.
 ```
 export GITPOD_IP=$(curl ifconfig.me)
 ```
-6. Update GITPOD yaml file to run the script everytime Gitpod starts.
+4. Update GITPOD yaml file to run the script everytime Gitpod starts.
 ```
 command: |
   export GITPOD_IP=$(curl ifconfig.me)
@@ -323,7 +317,7 @@ Create a Lambda Function in AWS  python as language.
 7. Advanced settings --> as default.
 8. create function
 
-# Create a new folder in backend-flask aws --> lambdas and add file name --> cruddur-post-confirrmation.py
+# Create a new folder in backend-flask aws --> lambdas and add file name --> cruddur-post-confirmation.py
 ```
 import json
 import psycopg2
@@ -382,11 +376,13 @@ def lambda_handler(event, context):
 7. Lambda Function --> Assign Lambda Function --> select --> one you created earlier.
 8. Add Lamdba Trigger.
 
-##  update permissions , and add EC@ role execution role 
+##  update permissions , and add EC2 role execution role 
 Create Permission for user for EC2 instance for VPC --> Create Role Policy --> Open Lamdba in AWS console
 11. Configuration tab --> Permissions --> click on Execution roles --> cruddur.
 12. Permission Policies -->  Policies --> Create Policy --> JSON
-```
+
+![image permission](assets/week4/permissions_lambda.jpg)
+![image policy](assets/week4/policy_lambda.jpg)
 
 Create a user and check if user get create in database. Functio will get trigger post singup confirmation.
 
@@ -749,6 +745,7 @@ def data_activities():
   return
 ```
 * Second all the updates made on the frontend
+* 
 1. added response for the body to handle the user from the frontend for @handle in the components/ActivityForm.js 
 ```
 body: JSON.stringify({
