@@ -441,7 +441,7 @@ def lambda_handler(event, context):
 ```
 
 2. updated schema.sql
-
+```
 -- https://www.postgresql.org/docs/current/uuid-ossp.html
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
@@ -744,8 +744,8 @@ def data_activities():
     return model['data'], 200
   return
 ```
-* Second all the updates made on the frontend
-* 
+# Update fronten-flask file to add  handle , which will help to view ctivities in app. 
+ 
 1. added response for the body to handle the user from the frontend for @handle in the components/ActivityForm.js 
 ```
 body: JSON.stringify({
