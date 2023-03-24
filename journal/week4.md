@@ -171,7 +171,7 @@ VALUES
     current_timestamp + interval '10 day'
   )
 ```
-26. create bash script to run seed.sql file. create a new file in bin folder.
+12. create bash script to run seed.sql file. create a new file in bin folder.
 ```
 #! /usr/bin/bash
 
@@ -309,13 +309,6 @@ command: |
 Implementing custom authorizer for congito for user to be inserted into db.
 Create a Lambda Function in AWS  python as language.
 1. AWS ---> Lambda --> create a function.
-2. Author from scratch
-3. Function name --> cruddur-post-confirmation.
-4. Runtime --> Python 3.8.
-5. Architecture --> x86_64.
-6. Change default execution role --> create a new role basic lambda permissions.
-7. Advanced settings --> as default.
-8. create function
 
 # Create a new folder in backend-flask aws --> lambdas and add file name --> cruddur-post-confirmation.py
 ```
