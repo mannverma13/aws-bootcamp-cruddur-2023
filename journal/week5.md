@@ -39,7 +39,7 @@ To speed up queries on non-key attributes, you can create a global secondary ind
 Every global secondary index must have a partition key, and can have an optional sort key. The index key schema can be different from the base table schema.
 You can retrieve items from a global secondary index using the Query and Scan operations. The GetItem and BatchGetItem operations can't be used on a global secondary index.
 
-## Intgration dynamo db in our app.
+## Intgration of dynamo db in our app.
 
 1. Create nwe bash scipts of creatign dynamo db and upsting schema details.
 Created new bash scripts and placed in folde bin/ddb/
@@ -118,10 +118,10 @@ response = ddb.create_table(
 print(response)
 ```
 
-![image DynamoDB](assets/WEEK5/dynamo_creation.jpg)
-![image DynamoDB](assets/WEEK5/dynamo_creation_aws.jpg)
+![DynamoDB creations](assets/WEEK5/dynamo_creation.jpg)
 
-Seed sql is created to load initial conversation in dynamo db.
+
+2. Seed sql is created to load initial conversation in dynamo db.
 
 Seed
 ```
@@ -371,9 +371,9 @@ for i in range(len(lines)):
  
  ##  implementing converation on frontend
  
- Create a new folder for storing dynamod db insidebackend-flas/lib/ddb.py
+ 1. Create a new folder for storing dynamod db inside backend-flas/lib/ddb.py
  
- '''py
+ ```py
  import boto3
 import sys
 from datetime import datetime, timedelta, timezone
@@ -540,9 +540,9 @@ class Ddb:
     except botocore.exceptions.ClientError as e:
       print('== create_message_group.error')
       print(e)
-   ```
+ ```
    
-  cretae a new scriprt to update uuids of user from cogniton. this is to get correct user id used while readign conversations.
+ 2. Create a new scriprt to update uuids of user from cogniton. this is to get correct user id used while readign conversations.
   
  backend/bi/db/update_cognito_user_ids  
   
@@ -603,10 +603,282 @@ for handle, sub in users.items():
   )
   
 ```
+## Frontend-flask changes
+
+1. Update the beare token in frontend js files to get request.
+
+2. Update to Checkuauth function instaed of harcoding it in frontend.js files.
+
+frontend-react-js/src/lib/Checkauth.js
+
+```js
+import { Auth } from 'aws-amplify';
+
+const checkAuth = async (setUser) => {
+  Auth.currentAuthenticatedUser({
+    // Optional, By default is false. 
+    // If set to true, this call will send a 
+    // request to Cognito to get the latest user data
+    bypassCache: false 
+  })
+  .then((user) => {
+    console.log('user',user);
+    return Auth.currentAuthenticatedUser()
+  }).then((cognito_user) => {
+      setUser({
+        display_name: cognito_user.attributes.name,
+        handle: cognito_user.attributes.preferred_username
+      })
+  })
+  .catch((err) => console.log(err));
+};
+
+export default checkAuth;
+```
+
+3. Update needs to be done in Homesfeed.js,  MessageGroupsPage.js ,MessageForm.js,MessageGroupsPage.js 
+
+Create a new .js file for MessageGroupNewPage.js. 
+
+```js
+import './MessageGroupPage.css';
+import React from "react";
+import { useParams } from 'react-router-dom';
+
+import DesktopNavigation  from '../components/DesktopNavigation';
+import MessageGroupFeed from '../components/MessageGroupFeed';
+import MessagesFeed from '../components/MessageFeed';
+import MessagesForm from '../components/MessageForm';
+import checkAuth from '../lib/CheckAuth';
+
+export default function MessageGroupPage() {
+  const [otherUser, setOtherUser] = React.useState([]);
+  const [messageGroups, setMessageGroups] = React.useState([]);
+  const [messages, setMessages] = React.useState([]);
+  const [popped, setPopped] = React.useState([]);
+  const [user, setUser] = React.useState(null);
+  const dataFetchedRef = React.useRef(false);
+  const params = useParams();
+
+  const loadUserShortData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/users/@${params.handle}/short`
+      const res = await fetch(backend_url, {
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        console.log('other user:',resJson)
+        setOtherUser(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };  
+
+  const loadMessageGroupsData = async () => {
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/message_groups`
+      const res = await fetch(backend_url, {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("access_token")}`
+        },
+        method: "GET"
+      });
+      let resJson = await res.json();
+      if (res.status === 200) {
+        setMessageGroups(resJson)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  };  
+
+  React.useEffect(()=>{
+    //prevents double call
+    if (dataFetchedRef.current) return;
+    dataFetchedRef.current = true;
+
+    loadMessageGroupsData();
+    loadUserShortData();
+    checkAuth(setUser);
+  }, [])
+  return (
+    <article>
+      <DesktopNavigation user={user} active={'home'} setPopped={setPopped} />
+      <section className='message_groups'>
+        <MessageGroupFeed otherUser={otherUser} message_groups={messageGroups} />
+      </section>
+      <div className='content messages'>
+        <MessagesFeed messages={messages} />
+        <MessagesForm setMessages={setMessages} />
+      </div>
+    </article>
+  );
+}
+```
+
+4. After following video I am able to get the messgae group details and create new conversations.
+
+![image mesage group ](assets/WEEK5/crud_app_dynamo_local.jpg)
+
+
+##  Dynamob PROD setup with lambda trigger
+
+1. Update the schema load file to add the global secnodary index.  
+2. run the bash script , dynamod db table shoud get created in AWS and viwable in console with GSDI created.
+
+```bash
+#!/usr/bin/env python3
+
+import boto3
+import sys
+
+attrs = {
+  'endpoint_url': 'http://localhost:8000'
+}
+
+if len(sys.argv) == 2:
+  if "prod" in sys.argv[1]:
+    attrs = {}
+
+ddb = boto3.client('dynamodb',**attrs)
+
+table_name = 'cruddur-messages'
+
+
+response = ddb.create_table(
+  TableName=table_name,
+  AttributeDefinitions=[
+    {
+      'AttributeName': 'message_group_uuid',
+      'AttributeType': 'S'
+    },
+    {
+      'AttributeName': 'pk',
+      'AttributeType': 'S'
+    },
+    {
+      'AttributeName': 'sk',
+      'AttributeType': 'S'
+    },
+  ],
+  KeySchema=[
+    {
+      'AttributeName': 'pk',
+      'KeyType': 'HASH'
+    },
+    {
+      'AttributeName': 'sk',
+      'KeyType': 'RANGE'
+    },
+  ],
+  GlobalSecondaryIndexes= [{
+    'IndexName':'message-group-sk-index',
+    'KeySchema':[{
+      'AttributeName': 'message_group_uuid',
+      'KeyType': 'HASH'
+    },{
+      'AttributeName': 'sk',
+      'KeyType': 'RANGE'
+    }],
+    'Projection': {
+      'ProjectionType': 'ALL'
+    },
+    'ProvisionedThroughput': {
+      'ReadCapacityUnits': 5,
+      'WriteCapacityUnits': 5
+    },
+  }],
+  BillingMode='PROVISIONED',
+  ProvisionedThroughput={
+      'ReadCapacityUnits': 5,
+      'WriteCapacityUnits': 5
+  }
+)
+
+print(response)
+)
+
+# print the response
+print(response)
+```
+
+![image mesage group ](assets/WEEK5/dynamo_creation.jpg)
+![image mesage group ](assets/WEEK5/lambda_trigger_dynamo.jpg)
+
+
+ ## Lambda function for trigger
  
+ Create a lambda function and associate with dynamod table created. this
+ 
+ cruddur_messaging_stream.py
+ ```py
+ import json
+import boto3
+from boto3.dynamodb.conditions import Key, Attr
+
+dynamodb = boto3.resource(
+ 'dynamodb',
+ region_name='us-east-1',
+ endpoint_url="http://dynamodb.us-east-1.amazonaws.com"
+)
+
+def lambda_handler(event, context):
+  pk = event['Records'][0]['dynamodb']['Keys']['pk']['S']
+  sk = event['Records'][0]['dynamodb']['Keys']['sk']['S']
+  if pk.startswith('MSG#'):
+    group_uuid = pk.replace("MSG#","")
+    message = event['Records'][0]['dynamodb']['NewImage']['message']['S']
+    print("GRUP ===>",group_uuid,message)
+    
+    table_name = 'cruddur-messages'
+    index_name = 'message-group-sk-index'
+    table = dynamodb.Table(table_name)
+    data = table.query(
+      IndexName=index_name,
+      KeyConditionExpression=Key('message_group_uuid').eq(group_uuid)
+    )
+    print("RESP ===>",data['Items'])
+    
+    # recreate the message group rows with new SK value
+    for i in data['Items']:
+      delete_item = table.delete_item(Key={'pk': i['pk'], 'sk': i['sk']})
+      print("DELETE ===>",delete_item)
+      
+      response = table.put_item(
+        Item={
+          'pk': i['pk'],
+          'sk': sk,
+          'message_group_uuid':i['message_group_uuid'],
+          'message':message,
+          'user_display_name': i['user_display_name'],
+          'user_handle': i['user_handle'],
+          'user_uuid': i['user_uuid']
+        }
+      )
+      print("CREATE ===>",response)
+   ```
+
+  Create a vpc endpoint for our table and add new IAM role for execution if dynamodb table.
   
-
-
+  ![VPC endpoint dynamo ](assets/WEEK5/vpc_endpoint_dynamo.jpg)
+  ![IAM roles ](assets/WEEK5/IAM_roles_dynamo.jpg)
+  
+  Docker compose up and test the message group and creation of new messgae functionality is working.
+  
+  ![IAM role ](assets/WEEK5/crud_app_dynamo_prod.jpg)
+  
+  We can see th lambda function is triggerd and logs can be seen in cloudwatch.
+  
+  ![Cloudwatch logs ](assets/WEEK5/cloudwatch_logs_dynamo.jpg)
+  
+  
+  
 
 
 
