@@ -311,8 +311,10 @@ aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-j
 
 12. Update securuity group inboud rule to allow traffice from port 4567 .
     
-    Use backend-flask container pubil IP address and check helth status.
+    Use backend-flask container pubil IP address and check health status.
     
-    
+![image health-check](assets/week6/health-check.jpg)    
+![image health-check](assets/week6/activity_home.jpg)    
+
  
     
