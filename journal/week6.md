@@ -71,6 +71,7 @@ echo $CRUD_CLUSTER_SG
  8. Create a new IAM role to provide execution role for creating task definition.
    role name- CruddurServiceExecutionRole 
    attached policty from  aws/policies/service-execution-policy.json to the role created.
+   
  9. Created task defintions for backedn and frontend application.  To register the taks defintions in ECS script created and stored in Bin/backend/register for backend-flask and bin/frontend/register for frontend-react-js.
    backend-flask.json
    ```json
@@ -148,66 +149,7 @@ echo $CRUD_CLUSTER_SG
     ]
   }
 ```
- frontend-react-js.json
-```json 
- {
-    "family": "frontend-react-js",
-    "executionRoleArn": "arn:aws:iam::AWS_ACCOUNT_ID:role/CruddurServiceExecutionRole",
-    "taskRoleArn": "arn:aws:iam::AWS_ACCOUNT_ID:role/CruddurTaskRole",
-    "networkMode": "awsvpc",
-    "cpu": "256",
-    "memory": "512",
-    "requiresCompatibilities": [ 
-      "FARGATE" 
-    ],
-    "containerDefinitions": [
-      {
-        "name": "xray",
-        "image": "public.ecr.aws/xray/aws-xray-daemon" ,
-        "essential": true,
-        "user": "1337",
-        "portMappings": [
-          {
-            "name": "xray",
-            "containerPort": 2000,
-            "protocol": "udp"
-          }
-        ]
-      },
-      {
-        "name": "frontend-react-js",
-        "image": "AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/frontend-react-js",
-        "essential": true,
-        "healthCheck": {
-          "command": [
-            "CMD-SHELL",
-            "curl -f http://localhost:3000 || exit 1"
-          ],
-          "interval": 30,
-          "timeout": 5,
-          "retries": 3
-        },
-        "portMappings": [
-          {
-            "name": "frontend-react-js",
-            "containerPort": 3000,
-            "protocol": "tcp", 
-            "appProtocol": "http"
-          }
-        ],
-  
-        "logConfiguration": {
-          "logDriver": "awslogs",
-          "options": {
-              "awslogs-group": "cruddur",
-              "awslogs-region": "us-east-1",
-              "awslogs-stream-prefix": "frontend-react-js"
-          }
-        }
-      }
-    ]
-  }
-```
+
 10. To create sevice on cluster created above we create a json file.
  service-backend-flask.json
 ```json
@@ -304,17 +246,160 @@ echo $CRUD_CLUSTER_SG
 ```sh
 backend
 aws ecs create-service --cli-input-json file://aws/json/service-backend-flask.json
-
-frontend
-aws ecs create-service --cli-input-json file://aws/json/service-frontend-react-js.json
 ```
+![image backend ecs](assets/week6/backend-ecs.jpg)    
 
-12. Update securuity group inboud rule to allow traffice from port 4567 .
+
+12. Update security group inboud rule to allow traffice from port 4567 .
     
     Use backend-flask container pubil IP address and check health status.
     
 ![image health-check](assets/week6/health-check.jpg)    
-![image health-check](assets/week6/activity_home.jpg)    
+![image activity-home](assets/week6/activity_home.jpg)    
 
+13.  Setting up Load balancer for frontend and backend applications acrros availibilty zones.
+     Created a new load balancer with name -cruddur-alb  with  security group cruddur-alb-sg.
+     Inbound rule is et to allow traffice from customer TCP port 4567 amd port 3000 .
+     Updated iboubd rule to allow traffice from custom prot with source as security group. 
+     Created 2 target groups 'cruddur-backend-flask-tg' and 'cruddur-frontend-react-js-tg' to use HTTP protocol and connect on port 4567 $ 3000 repectively.
+     Added a '/api/health-check' for the backend traget gorup.
+     Add these traget groups to the load balancer.
+     
+ All traffice will flow now through load balancers with targer groups. Verified able to connect to application using load baclncer DNS with backend 4567 endpoint.
+ 
+![image load balancer](assets/week6/alb.JPG)   
+![image alb dns frontend](assets/week6/albdns4567.jpg)    
+     
+14. set up for frontend-react applcation
+     
+ Create task definition for frontend app. Json file stored in aws/task-definitions/frontend-react-js.json.
+ frontend-react-js.json
+ ```json
+  {
+    "family": "frontend-react-js",
+    "executionRoleArn": "arn:aws:iam::364455495412:role/CruddurServiceExecutionRole",
+    "taskRoleArn": "arn:aws:iam::364455495412:role/CruddurTaskRole",
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "512",
+    "requiresCompatibilities": [ 
+      "FARGATE" 
+    ],
+    "containerDefinitions": [
+      {
+        "name": "xray",
+        "image": "public.ecr.aws/xray/aws-xray-daemon" ,
+        "essential": true,
+        "user": "1337",
+        "portMappings": [
+          {
+            "name": "xray",
+            "containerPort": 2000,
+            "protocol": "udp"
+          }
+        ]
+      },
+      {
+        "name": "frontend-react-js",
+        "image": "364455495412.dkr.ecr.us-east-1.amazonaws.com/frontend-react-js",
+        "essential": true,
+        "healthCheck": {
+          "command": [
+            "CMD-SHELL",
+            "curl -f http://localhost:3000 || exit 1"
+          ],
+          "interval": 30,
+          "timeout": 5,
+          "retries": 3
+        },
+        "portMappings": [
+          {
+            "name": "frontend-react-js",
+            "containerPort": 3000,
+            "protocol": "tcp", 
+            "appProtocol": "http"
+          }
+        ],
+  
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+              "awslogs-group": "cruddur",
+              "awslogs-region": "us-east-1",
+              "awslogs-stream-prefix": "frontend-react-js"
+          }
+        }
+      }
+    ]
+  }
+```
+15.  service file for frontend-react app. 
+ frontend-react-js.json
+```json 
+ {
+    "family": "frontend-react-js",
+    "executionRoleArn": "arn:aws:iam::AWS_ACCOUNT_ID:role/CruddurServiceExecutionRole",
+    "taskRoleArn": "arn:aws:iam::AWS_ACCOUNT_ID:role/CruddurTaskRole",
+    "networkMode": "awsvpc",
+    "cpu": "256",
+    "memory": "512",
+    "requiresCompatibilities": [ 
+      "FARGATE" 
+    ],
+    "containerDefinitions": [
+      {
+        "name": "xray",
+        "image": "public.ecr.aws/xray/aws-xray-daemon" ,
+        "essential": true,
+        "user": "1337",
+        "portMappings": [
+          {
+            "name": "xray",
+            "containerPort": 2000,
+            "protocol": "udp"
+          }
+        ]
+      },
+      {
+        "name": "frontend-react-js",
+        "image": "AWS_ACCOUNT_ID.dkr.ecr.us-east-1.amazonaws.com/frontend-react-js",
+        "essential": true,
+        "healthCheck": {
+          "command": [
+            "CMD-SHELL",
+            "curl -f http://localhost:3000 || exit 1"
+          ],
+          "interval": 30,
+          "timeout": 5,
+          "retries": 3
+        },
+        "portMappings": [
+          {
+            "name": "frontend-react-js",
+            "containerPort": 3000,
+            "protocol": "tcp", 
+            "appProtocol": "http"
+          }
+        ],
+  
+        "logConfiguration": {
+          "logDriver": "awslogs",
+          "options": {
+              "awslogs-group": "cruddur",
+              "awslogs-region": "us-east-1",
+              "awslogs-stream-prefix": "frontend-react-js"
+          }
+        }
+      }
+    ]
+  }
+```
+![image frontned ecs](assets/week6/frontendecs.jpg)    
+16. repeat steps to buildtag and push image. scripts for frontend app is stoered at bin/frontend
+
+able to connect to endpoint 3000 using alb dns and data fetched from  database.
+
+![image alb dns frontend](assets/week6/albdns3000.jpg)    
+![image frontend target grp](assets/week6/frontendtargetgrp.jpg)  
  
     
