@@ -508,12 +508,11 @@ import {checkAuth, getAccessToken} from '../lib/CheckAuth';
         headers: {  
           Authorization: `Bearer ${access_token}`
         },
-```.
+```
 
 ## Change Docker Compose to explicitly use a user-defined network
 
 Update below line of code to use specfic use rn network in docker compose file.
-
 update network pint in fronentd backend ,db, dyamn service to use cruder- net network.
 
 ```
