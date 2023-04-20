@@ -402,4 +402,22 @@ able to connect to endpoint 3000 using alb dns and data fetched from  database.
 ![image alb dns frontend](assets/week6/albdns3000.jpg)    
 ![image frontend target grp](assets/week6/frontendtargetgrp.jpg)  
  
-    
+ ## Setup custom domain and connect using route 53.
+ 
+ 17. Created a new hosted xone in Route53.
+     updated nameserver from where we have bought domain name.
+     Created  certificate usign ACM and create a record in hosted Zone.
+     Create simple record to rout traffic from domain mane and api.cruddurproject.xyz .
+
+![image roue53](assets/week6/route53.jpg)   
+![image certificate](assets/week6/ACM-certficate.jpg)   
+
+18. Update load balancer listners to allow traffic from HTTP port 80:   to redirect traffice to port 443.
+     Add rule HTTPS on port 443:  to redriect to cruddur-frontend-react-js  traget group.
+ ![image custome login](assets/week6/alb-listners.jpg)        
+   Able to connect using customer domain post setup.
+   
+ ![image custome login](assets/week6/custom-domain-login.jpg)   
+ 
+ 
+ 
