@@ -6,6 +6,8 @@ AWS Fargate is a serverless, pay-as-you-go compute engine that lets you focus on
 
 We performed below activities to create container images  in ECS.
 
+##  ECR ECS setup for backend & frontend applications.
+
 1. Created a test script to tes RDS connection
    Script stored at  bin/db/test
 
@@ -446,6 +448,79 @@ able to connect to endpoint 3000 using alb dns and data fetched from  database.
  ![image xray-frontend task](assets/week6/frontendxray-task-definition.jpg)         
  ![image xray-frontend ECS](assets/week6/frontendxray-ecs.jpg)         
  
- 
+## Implement Refresh Token for Amazon Cognito
+
+21. update checu_auth.js file
+
+```
+import { Auth } from "aws-amplify";
+import { resolvePath } from "react-router-dom";
+
+export async function getAccessToken() {
+  Auth.currentSession()
+    .then((cognito_user_session) => {
+      const access_token = cognito_user_session.accessToken.jwtToken;
+      localStorage.setItem("access_token", access_token);
+    })
+    .catch((err) => console.log(err));
+}
+
+export async function checkAuth(setUser) {
+  Auth.currentAuthenticatedUser({
+    // Optional, By default is false.
+    // If set to true, this call will send a
+    // request to Cognito to get the latest user data
+    bypassCache: false,
+  })
+    .then((cognito_user) => {
+      console.log("cognito_user", cognito_user);
+      setUser({
+        display_name: cognito_user.attributes.name,
+        handle: cognito_user.attributes.preferred_username,
+      });
+      return Auth.currentSession();
+    })
+    .then((cognito_user_session) => {
+      console.log("cognito_user_session", cognito_user_session);
+      localStorage.setItem(
+        "access_token",
+        cognito_user_session.accessToken.jwtToken
+      );
+    })
+    .catch((err) => console.log(err));
+}
+```
+22 . Update below frontend app pages to use acccess token from Check_auth.js
+MessageForm.js
+HomeFeedPage
+MessageGroupNewPage
+MessageGroupsPage
+MessageGroupPage
+
+Updated belo line of codes in above files . This to get access token from check_auth function and use it suring load functions.
+
+```
+import {checkAuth, getAccessToken} from '../lib/CheckAuth';
+
+      await getAccessToken()
+      const access_token = localStorage.getItem("access_token")
+      const res = await fetch(backend_url, {
+        headers: {  
+          Authorization: `Bearer ${access_token}`
+        },
+```.
+
+## Change Docker Compose to explicitly use a user-defined network
+
+Update below line of code to use specfic use rn network in docker compose file.
+
+update network pint in fronentd backend ,db, dyamn service to use cruder- net network.
+
+```
+networks: 
+  cruddur-net:
+    driver: bridge
+    name: cruddur-net
+ ```   
 
  
