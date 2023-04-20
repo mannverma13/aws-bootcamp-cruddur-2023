@@ -414,10 +414,38 @@ able to connect to endpoint 3000 using alb dns and data fetched from  database.
 
 18. Update load balancer listners to allow traffic from HTTP port 80:   to redirect traffice to port 443.
      Add rule HTTPS on port 443:  to redriect to cruddur-frontend-react-js  traget group.
- ![image custome login](assets/week6/alb-listners.jpg)        
+ ![image custom login](assets/week6/alb-listners.jpg)        
    Able to connect using customer domain post setup.
    
  ![image custome login](assets/week6/custom-domain-login.jpg)   
  
+## setup for x-ray 
+
+20 . Added conaners detail in task defintions for backend and frontend app.
+     This will create xray containers in ECS. This is to help teac and loggin put application.
+
+```json
+ "containerDefinitions": [
+      {
+        "name": "xray",
+        "image": "public.ecr.aws/xray/aws-xray-daemon" ,
+        "essential": true,
+        "user": "1337",
+        "portMappings": [
+          {
+            "name": "xray",
+            "containerPort": 2000,
+            "protocol": "udp"
+          }
+        ]
+      },
+```      
+ ![image xray-backend task](assets/week6/backendxray-task-definition.jpg)         
+ ![image xray-backend ECS](assets/week6/backendxray-ecs.jpg)     
  
+ ![image xray-frontend task](assets/week6/frontendxray-task-definition.jpg)         
+ ![image xray-frontend ECS](assets/week6/frontendxray-ecs.jpg)         
+ 
+ 
+
  
