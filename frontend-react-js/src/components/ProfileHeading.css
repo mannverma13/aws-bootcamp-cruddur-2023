@@ -3,10 +3,14 @@
   }
   
   .profile_heading .profile-avatar {
-      position: absolute;
-      bottom:-74px;
-      left: 16px;
-    }
+    position: absolute;
+    bottom:-74px;
+    left: 16px;
+    width: 148px;
+    height: 148px;
+    border-radius: 999px;
+    border: solid 8px var(--fg);
+  }
   
   .profile_heading .avatar img {
       width: 148px;
