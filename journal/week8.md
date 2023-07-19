@@ -378,15 +378,427 @@ def data_update_profile():
 Changes implimented to update profile updatiion.
 
 1. Created new component EditProfileButton.js and created a css file. This is to edit profile for user.
+```
+#   
+import './EditProfileButton.css';
+
+export default function EditProfileButton(props) {
+  const pop_profile_form = (event) => {
+    event.preventDefault();
+    props.setPopped(true);
+    return false;
+  }
+
+  return (
+    <button onClick={pop_profile_form} className='profile-edit-button' href="#">Edit Profile</button>
+  );
+}
+```
 2. Created Created new component frontend-react-js/src/components/ProfileHeading.js to display profile header image.
 this will pull image from s3 bucket under banner folder.
+```
+import './ProfileHeading.css';
+import EditProfileButton from '../components/EditProfileButton';
+
+export default function ProfileHeading(props) {
+  const backgroundImage = 'url("https://assets.cruddur.com/banners/banner.jpg")';
+  const styles = {
+    backgroundImage: backgroundImage,
+    backgroundSize: 'cover',
+    backgroundPosition: 'center',
+  };
+  return (
+  <div className='activity_feed_heading profile_heading'>
+    <div className='title'>{props.profile.display_name}</div>
+    <div className="cruds_count">{props.profile.cruds_count} Cruds</div>
+    <div class="banner" style={styles} >
+      <div className="avatar">
+        <img src="https://assets.cruddur.com/avatars/data.jpg"></img>
+      </div>
+    </div>
+    <div class="info">
+      <div class='id'>
+        <div className="display_name">{props.profile.display_name}</div>
+        <div className="handle">@{props.profile.handle}</div>
+      </div>
+      <EditProfileButton setPopped={props.setPopped} />
+    </div>
+  </div>
+  );
+}
+```
+
+3. Update pages userfeed/notifications/home to get reponse from activity_feed.js 
+
+# Implementing Migration Backend endpoint to update profile.
+
+1. created amigration script to add bio column to to add users table.
+   This will take informationn from file placed in backend-flask/migrations/54645747677.py
+   
+```
+### 16888365784196231_add_bio_column.py
+from lib.db import db
+
+class AddBioColumnMigration:
+  def migrate_sql():
+    data = """
+    ALTER TABLE public.users ADD COLUMN bio text  ;
+    """
+    return data
+  def rollback_sql():
+    data = """
+    ALTER TABLE public.users DROP COLUMN bio;
+    """
+    return data
+
+  def migrate():
+    db.query_commit(AddBioColumnMigration.migrate_sql(),{
+    })
+
+  def rollback():
+    db.query_commit(AddBioColumnMigration.rollback_sql(),{
+    })
+
+migration = AddBioColumnMigration
+```
+
+```
+###migration script
+#!/usr/bin/env python3
+
+import os
+import sys
+import glob
+import re
+import time
+import importlib
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+parent_path = os.path.abspath(os.path.join(current_path, '..', '..','backend-flask'))
+sys.path.append(parent_path)
+from lib.db import db
+
+def get_last_successful_run():
+  sql = """
+    SELECT last_successful_run
+    FROM public.schema_information
+    LIMIT 1
+  """
+  return int(db.query_value(sql,{},verbose=False))
+
+def set_last_successful_run(value):
+  sql = """
+  UPDATE schema_information
+  SET last_successful_run = %(last_successful_run)s
+  WHERE id = 1
+  """
+  db.query_commit(sql,{'last_successful_run': value},verbose=False)
+  return value
+
+last_successful_run = get_last_successful_run()
+
+migrations_path = os.path.abspath(os.path.join(current_path, '..', '..','backend-flask','db','migrations'))
+sys.path.append(migrations_path)
+migration_files = glob.glob(f"{migrations_path}/*")
 
 
+for migration_file in migration_files:
+  filename = os.path.basename(migration_file)
+  module_name = os.path.splitext(filename)[0]
+  match = re.match(r'^\d+', filename)
+  if match:
+    file_time = int(match.group())
+    if last_successful_run <= file_time:
+      mod = importlib.import_module(module_name)
+      print('=== running migration: ',module_name)
+      mod.migration.migrate()
+      timestamp = str(time.time()).replace(".","")
+      last_successful_run = set_last_successful_run(timestamp)
+```
+
+Rollback script to rollback  changes to last successful run.  this will update timestamp in schem_information table
+```
+#!/usr/bin/env python3
+
+import os
+import sys
+import glob
+import re
+import time
+import importlib
+
+current_path = os.path.dirname(os.path.abspath(__file__))
+parent_path = os.path.abspath(os.path.join(current_path, '..', '..','backend-flask'))
+sys.path.append(parent_path)
+from lib.db import db
+
+def get_last_successful_run():
+  sql = """
+    SELECT last_successful_run
+    FROM public.schema_information
+    LIMIT 1
+  """
+  return int(db.query_value(sql,{},verbose=False))
+
+def set_last_successful_run(value):
+  sql = """
+  UPDATE schema_information
+  SET last_successful_run = %(last_successful_run)s
+  WHERE id = 1
+  """
+  db.query_commit(sql,{'last_successful_run': value})
+  return value
+
+last_successful_run = get_last_successful_run()
+
+migrations_path = os.path.abspath(os.path.join(current_path, '..', '..','backend-flask','db','migrations'))
+sys.path.append(migrations_path)
+migration_files = glob.glob(f"{migrations_path}/*")
 
 
+last_migration_file = None
+for migration_file in migration_files:
+  if last_migration_file == None:
+    filename = os.path.basename(migration_file)
+    module_name = os.path.splitext(filename)[0]
+    match = re.match(r'^\d+', filename)
+    if match:
+      file_time = int(match.group())
+      print("==<><>")
+      print(last_successful_run, file_time)
+      print(last_successful_run > file_time)
+      if last_successful_run > file_time:
+        last_migration_file = module_name
+        mod = importlib.import_module(module_name)
+        print('=== rolling back: ',module_name)
+        mod.migration.rollback()
+        set_last_successful_run(file_time)
+```
 
+4. added a frontend-react-js/src/components/ProfileForm.js  file. this will upload th image to s3 bucket.
+```
+import './ProfileForm.css';
+import React from "react";
+import process from 'process';
+import {getAccessToken} from 'lib/CheckAuth';
 
+export default function ProfileForm(props) {
+  const [bio, setBio] = React.useState(0);
+  const [displayName, setDisplayName] = React.useState(0);
 
+  React.useEffect(()=>{
+    console.log('useEffects',props)
+    setBio(props.profile.bio);
+    setDisplayName(props.profile.display_name);
+  }, [props.profile])
+
+  const onsubmit = async (event) => {
+    event.preventDefault();
+    try {
+      const backend_url = `${process.env.REACT_APP_BACKEND_URL}/api/profile/update`
+      await getAccessToken()
+      const access_token = localStorage.getItem("access_token")
+      const res = await fetch(backend_url, {
+        method: "POST",
+        headers: {
+          'Authorization': `Bearer ${access_token}`,
+          'Accept': 'application/json',
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          bio: bio,
+          display_name: displayName
+        }),
+      });
+      let data = await res.json();
+      if (res.status === 200) {
+        setBio(null)
+        setDisplayName(null)
+        props.setPopped(false)
+      } else {
+        console.log(res)
+      }
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  const bio_onchange = (event) => {
+    setBio(event.target.value);
+  }
+
+  const display_name_onchange = (event) => {
+    setDisplayName(event.target.value);
+  }
+
+  const close = (event)=> {
+    if (event.target.classList.contains("profile_popup")) {
+      props.setPopped(false)
+    }
+  }
+
+  if (props.popped === true) {
+    return (
+      <div className="popup_form_wrap profile_popup" onClick={close}>
+        <form 
+          className='profile_form popup_form'
+          onSubmit={onsubmit}
+        >
+          <div class="popup_heading">
+            <div class="popup_title">Edit Profile</div>
+            <div className='submit'>
+              <button type='submit'>Save</button>
+            </div>
+          </div>
+          <div className="popup_content">
+            <div className="field display_name">
+              <label>Display Name</label>
+              <input
+                type="text"
+                placeholder="Display Name"
+                value={displayName}
+                onChange={display_name_onchange} 
+              />
+            </div>
+            <div className="field bio">
+              <label>Bio</label>
+              <textarea
+                placeholder="Bio"
+                value={bio}
+                onChange={bio_onchange} 
+              />
+            </div>
+          </div>
+        </form>
+      </div>
+    );
+  }
+}
+```
+
+### Implement Avatar Uploading
+
+Below are steps I followed to  implemtn uploadinf a image to s3 from my app.
+1. Create a api end point to upload image using a presigned url  and provide access to S3 bucket bu using authorizer.
+  Create two routes - POST /avatars/key_upload with authorizer CruddurJWTAuthorizer and OPTIONS /{proxy+} without authorizer. Theese two routes will be for integration 
+  with CruddurAvatarUpload S3 Bucket
+3. Create a Lambda function named CruddurAvatarUpload that will decode the URL and the request.
+```
+require 'aws-sdk-s3'
+require 'json'
+require 'jwt'
+
+def handler(event:, context:)
+  puts event
+  # return cors headers for preflight check.
+  if event['routeKey'] == "OPTIONS /{proxy+}"
+    puts({step: 'preflight', message: 'preflight CORS check'}.to_json)
+    { 
+      headers: {
+        "Access-Control-Allow-Headers": "*, Authorization",
+        "Access-Control-Allow-Origin": "https://3000-mannverma13-awsbootcamp-c05nw4dbq8q.ws-us101.gitpod.io",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,POST"
+      },
+      statusCode: 200
+    }
+  else
+    token = event['headers']['authorization'].split(' ')[1]
+    
+    
+    body_hash = JSON.parse(event["body"])
+    extension = body_hash["extension"]
+
+    #decoded_token = JWT.decode token, nil, false
+    #cognito_user_uuid = decoded_token[0]['sub']
+    
+    cognito_user_uuid = event["requestContext"]["authorizer"]["lambda"]["sub"]
+    puts({step: 'presignedurl', access_token: token}.to_json)
+
+    s3 = Aws::S3::Resource.new
+    bucket_name = ENV["UPLOADS_BUCKET_NAME"]
+    object_key = "#{cognito_user_uuid}.#{extension}"
+
+    puts({object_key: object_key}.to_json)
+
+    obj = s3.bucket(bucket_name).object(object_key)
+    url = obj.presigned_url(:put, expires_in: 60 * 5)
+    url # this is the data that will be returned
+    body = {url: url}.to_json
+    { 
+      headers: {
+        "Access-Control-Allow-Headers": "*, Authorization",
+        "Access-Control-Allow-Origin": "https://3000-mannverma13-awsbootcamp-c05nw4dbq8q.ws-us101.gitpod.io",
+        "Access-Control-Allow-Methods": "OPTIONS,GET,POST"
+      },
+      statusCode: 200, 
+      body: body 
+    }
+  end # if 
+end # def handler
+```
+4. To authorize the request from gitpod url addd a lmabda functinon CruddurApiGatewayLambdaAuthorizer.
+
+```
+"use strict";
+const { CognitoJwtVerifier } = require("aws-jwt-verify");
+//const { assertStringEquals } = require("aws-jwt-verify/assert");
+
+const jwtVerifier = CognitoJwtVerifier.create({
+  userPoolId: process.env.USER_POOL_ID,
+  tokenUse: "access",
+  clientId: process.env.CLIENT_ID, //,
+  //customJwtCheck: ({ payload }) => {
+  //  assertStringEquals("e-mail", payload["email"], process.env.USER_EMAIL);
+  //},
+});
+
+exports.handler = async (event) => {
+  console.log("request:", JSON.stringify(event, undefined, 2));
+
+  // const jwt = event.headers.authorization;
+  const auth = event.headers.authorization;
+  const jwt = auth.split(" ")[1];
+
+  try {
+    const payload = await jwtVerifier.verify(jwt);
+    console.log("Access allowed. JWT payload:", payload);
+    return {
+      isAuthorized: true,
+      context: {
+        sub: payload.sub,
+      },
+    };
+  } catch (err) {
+    console.error("Access forbidden:", err);
+    return {
+      isAuthorized: false,
+    };
+  }
+};
+```
+5. Update permissions of the upload bucket to allow access from gitpod.ip. editing the CORS configuration.
+```
+[
+    {
+        "AllowedHeaders": [
+            "*"
+        ],
+        "AllowedMethods": [
+            "PUT"
+        ],
+        "AllowedOrigins": [
+            "https://*.gitpod.io"
+        ],
+        "ExposeHeaders": [
+            "x-amz-server-side-encryption",
+            "x-amz-request-id",
+            "x-amz-id-2"
+        ],
+        "MaxAgeSeconds": 3000
+    }
+]
+```
+6. update the api getway endpoint in our env file.
 
 
 
