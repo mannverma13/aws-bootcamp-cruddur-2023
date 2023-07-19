@@ -179,10 +179,12 @@ export class ThumbingServerlessCdkStack extends cdk.Stack {
 }
 ```
 Screenshot for proofs.
-
-![Image upload](assets/week8/testing_migrations.png)
-
-
+![CDK](assets/week8/cdk.jpg)
+![S3 upload](assets/week8/s3-upload1.jpg)
+![S3 upload](assets/week8/s3-upload2.jpg)
+![S3 upload](assets/week8/s3-upload3.jpg)
+![cloudwatch logs](assets/week8/s3-uploadcloud-logs.jpg)
+ 
 ## Serving Avatars via CloudFront
 
 Implemented below steps to serve images using cloudfront.
@@ -219,10 +221,9 @@ Leave the "Default Root Object" field blank.
 ```
 6. Create a record via route 53 . to route traffic using cloudfront alias.
 
-image  cloudfront
+![cloudfront](assets/week8/cloudfront.jpg)
 
-
-   image---- route 53
+![route53](assets/week8/route53.jpg)
 
 
 ## Implementing User Profile Page
@@ -675,6 +676,9 @@ export default function ProfileForm(props) {
   }
 }
 ```
+![Migrations](assets/week8/migrations.jpg)
+![Migrations](assets/week8/migrations2.jpg)
+![Rollback](assets/week8/rollback.jpg).
 
 ### Implement Avatar Uploading
 
@@ -800,6 +804,11 @@ exports.handler = async (event) => {
 ```
 6. update the api getway endpoint in our env file.
 
-
-
+![User profile](assets/week8/profile%20page1.jpg).
+![User profil](assets/week8/profile%20page2.jpg).
+![User profil](assets/week8/profile%20page3.jpg).
+![User profil](assets/week8/profile%20page4.jpg).
+![User profil](assets/week8/profile%20page5.jpg).
+![User profil](assets/week8/profile%20page6.jpg).
+![User profil](assets/week8/profile%20page7.jpg).
 
