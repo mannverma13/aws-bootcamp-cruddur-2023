@@ -183,6 +183,209 @@ Screenshot for proofs.
 ![Image upload](assets/week8/testing_migrations.png)
 
 
+## Serving Avatars via CloudFront
+
+Implemented below steps to serve images using cloudfront.
+
+Create a new cloudfront distribution.
+1. Update "Origin Domain Name" field, enter the endpoint for your asset bucket.2.
+2. In "Viewer Protocol Policy" section, select "Redirect HTTP to HTTPS" to enforce HTTPS for all viewer requests.
+3. Create custom SSl certificate like created for Rout3 53 and it under ' custom SSL certificate section
+In the "Alternate Domain Names (CNAMEs)" section, added the s3 bucket domain name like assets.<your_domain_name>.
+Leave the "Default Root Object" field blank.
+4. add a invlaidation to always allow server latest image uploaded by user.
+5. Update S3 bucket policy to allow aOnce your distribution is created, navigate to your S3 bucket and update its bucket policy to allow access from your CloudFront distribution.
+```
+{
+    "Version": "2008-10-17",
+    "Id": "PolicyForCloudFrontPrivateContent",
+    "Statement": [
+        {
+            "Sid": "AllowCloudFrontServicePrincipal",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudfront.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::assets.cruddurproject.xyz/*",
+            "Condition": {
+                "StringEquals": {
+                    "AWS:SourceArn": "arn:aws:cloudfront::**********:distribution/E1SZJABWN*****"
+                }
+            }
+        }
+    ]
+}
+```
+6. Create a record via route 53 . to route traffic using cloudfront alias.
+
+image  cloudfront
+
+
+   image---- route 53
+
+
+## Implementing User Profile Page
+
+### backend changes
+
+1. Update show.sql query to pull cognito user id , cruds_count etc from table . This information is use to get user information while uploading and getting user image from
+   bucket. on profile page.
+```
+SELECT 
+  (SELECT COALESCE(row_to_json(object_row),'{}'::json) FROM (
+    SELECT
+      users.uuid,
+      users.cognito_user_id as cognito_user_uuid,
+      users.handle,
+      users.display_name,
+      users.bio,
+      (
+       SELECT 
+        count(true) 
+       FROM public.activities
+       WHERE
+        activities.user_uuid = users.uuid
+       ) as cruds_count
+  ) object_row) as profile,
+  (SELECT COALESCE(array_to_json(array_agg(row_to_json(array_row))),'[]'::json) FROM (
+    SELECT
+      activities.uuid,
+      users.display_name,
+      users.handle,
+      activities.message,
+      activities.created_at,
+      activities.expires_at
+    FROM public.activities
+    WHERE
+      activities.user_uuid = users.uuid
+    ORDER BY activities.created_at DESC 
+    LIMIT 40
+  ) array_row) as activities
+FROM public.users
+WHERE
+  users.handle = %(handle)s
+```
+
+2. Add an new field bio in users table . Created a new query to update bio information as per cognito user id.
+```
+UPDATE public.users 
+SET 
+  bio = %(bio)s,
+  display_name= %(display_name)s
+WHERE 
+  users.cognito_user_id = %(cognito_user_id)s
+RETURNING handle;
+```
+
+3. added a function in the backend-flask/services/user_activities.py file:  to get user information by calling show.sql query.
+
+```
+from lib.db import db
+
+class UserActivities:
+  def run(user_handle):
+      model = {
+        'errors': None,
+        'data': None
+      }
+      if user_handle == None or len(user_handle) < 1:
+        model['errors'] = ['blank_user_handle']
+      else:
+        print("else:")
+        sql = db.template('users','show')
+        results = db.query_object_json(sql,{'handle': user_handle})
+        model['data'] = results
+        
+      return model
+```
+
+4.  update the backend-flask/services/update_profile.py file:  to update bio informatiion in user table. this will call update.sql query.
+
+```
+from lib.db import db
+
+class UpdateProfile:
+  def run(cognito_user_id,bio,display_name):
+    model = {
+      'errors': None,
+      'data': None
+    }
+
+    if display_name == None or len(display_name) < 1:
+      model['errors'] = ['display_name_blank']
+
+    if model['errors']:
+      model['data'] = {
+        'bio': bio,
+        'display_name': display_name
+      }
+    else:
+      handle = UpdateProfile.update_profile(bio,display_name,cognito_user_id)
+      data = UpdateProfile.query_users_short(handle)
+      model['data'] = data
+    return model
+
+  def update_profile(bio,display_name,cognito_user_id):
+    if bio == None:    
+      bio = ''
+
+    sql = db.template('users','update')
+    handle = db.query_commit(sql,{
+      'cognito_user_id': cognito_user_id,
+      'bio': bio,
+      'display_name': display_name
+    })
+  def query_users_short(handle):
+    sql = db.template('users','short')
+    data = db.query_object_json(sql,{
+      'handle': handle
+    })
+    return data
+```
+
+5. Update the backend-flask/app.py file:  to add new route to get user information based on their id and to update user bio information based in their id.
+```
+from services.update_profile import *
+
+@app.route("/api/profile/update", methods=['POST','OPTIONS'])
+@cross_origin()
+def data_update_profile():
+  bio          = request.json.get('bio',None)
+  display_name = request.json.get('display_name',None)
+  access_token = extract_access_token(request.headers)
+  try:
+    claims = cognito_jwt_token.verify(access_token)
+    cognito_user_id = claims['sub']
+    model = UpdateProfile.run(
+      cognito_user_id=cognito_user_id,
+      bio=bio,
+      display_name=display_name
+    )
+    if model['errors'] is not None:
+      return model['errors'], 422
+    else:
+      return model['data'], 200
+  except TokenVerifyError as e:
+    # unauthenicatied request
+    app.logger.debug(e)
+    return {}, 401
+
+```
+
+### Front end changes
+
+Changes implimented to update profile updatiion.
+
+1. Created new component EditProfileButton.js and created a css file. This is to edit profile for user.
+2. Created Created new component frontend-react-js/src/components/ProfileHeading.js to display profile header image.
+this will pull image from s3 bucket under banner folder.
+
+
+
+
+
+
 
 
 
